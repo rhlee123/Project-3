@@ -1,37 +1,43 @@
-## Welcome to GitHub Pages
-
-You can use the [editor on GitHub](https://github.com/rhlee123/Project-3/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
-
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+# Midterm Project 
+## Introduction 
+  The goal of this project is to evaluate the performance of different regressors when predicting the price of a property using the features within the boston housing data set, as well as polynomial features created from the original data. First, I explored the use of regularized regression on polynomial features created from the original data to predct housing prices in boston. In particular I usied six different regularization techniques: LASSO, Ridge, Elastic Net, SCAD (Smoothly-Clipped Absolute Deviation), Square Root Lasso, and Stepwise. Further I explored the use kernel regression, Random Forest, XGBoost, and Neural networks. I used K-fold cross validation to examine each model's mean absolute error. The model that yields the lowest mean absolute error when predicting the price would be the most accurate. 
+## Start 
+  Below, I imported relevant packages and pulled in the data set. I also set the parameter value k equal to 10 for my K-fold cross validation. K-fold cross validation shuffles the data set, splits the data sets into k groups (10 in my case), evaluates each group as its own individual test set and using the remaining groups as a training set to fit the model, and retains an evaluation score for each group. Ultimately, the accuracy of a model is summarized by the sample of the model evaluation scores collected for each group.
+```python 
+import numpy as np
+import pandas as pd
+from math import ceil
+from scipy import linalg
+from scipy.interpolate import interp1d
+from sklearn.model_selection import KFold
+from sklearn.metrics import mean_absolute_error as MAE
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.metrics import mean_absolute_error,mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+from matplotlib import pyplot
+from sklearn.model_selection import train_test_split as tts
+import statsmodels.api as sm
+from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from scipy.optimize import minimize
+from scipy.linalg import toeplitz
+import operator
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+from statsmodels.nonparametric.kernel_regression import KernelReg
+kf = KFold(n_splits=k,shuffle=True,random_state=1234)
+df_boston = pd.read_csv('/content/gdrive/MyDrive/Colab Notebooks/Boston Housing Prices(1) (1).csv')
+```
+Preprocessing: 
+```python 
+df_boston
+features = ['crime','rooms','residential','industrial','nox','older','distance','highway','tax','ptratio','lstat']
+X = np.array(df_boston[features])
+y = np.array(df_boston['cmedv']).reshape(-1,1)
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+To take a look at the boston housing data set, here is a heatmap showing the correlations between features in the dataset in which we will be using to predict housing prices: 
 
-### Jekyll Themes
+![project1](https://user-images.githubusercontent.com/55299814/111015985-6133d380-8379-11eb-9c51-925a01550166.png)
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/rhlee123/Project-3/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
