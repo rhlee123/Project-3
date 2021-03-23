@@ -123,6 +123,7 @@ def sqrtlasso_model(X,y,alpha):
   output = minimize(sqrtlasso, b0, method='L-BFGS-B', jac=dsqrtlasso,options={'gtol': 1e-8, 'maxiter': 1e8,'maxls': 25,'disp': True})
   return output.x
 ```
+#### Implementation 
 ```python 
 def DoKFoldSqrt(X,y,a,k,d):
   PE = []
@@ -144,6 +145,24 @@ def DoKFoldSqrt(X,y,a,k,d):
     PE.append(MAE(y_test,yhat_sqrt))
   return 1000*np.mean(PE)
 ```
+### SCAD
+The Smoothly Clipped Absolute Deviation regularization attempts to address issues of multicolinearity and encourage sparse solutions to ordinary least squares, while at the same time allowing for large (β) Values. 
+
+The SCAD penalty is genearlly defined by it first derivative:
+
+![p'_\lambda(\beta) = \lambda \left\{ I(\beta \leq \lambda) + \frac{(a\lambda - \beta)_+}{(a - 1) \lambda} I(\beta > \lambda) \right\}
+](https://render.githubusercontent.com/render/math?math=%5CLarge+%5Cdisplaystyle+p%27_%5Clambda%28%5Cbeta%29+%3D+%5Clambda+%5Cleft%5C%7B+I%28%5Cbeta+%5Cleq+%5Clambda%29+%2B+%5Cfrac%7B%28a%5Clambda+-+%5Cbeta%29_%2B%7D%7B%28a+-+1%29+%5Clambda%7D+I%28%5Cbeta+%3E+%5Clambda%29+%5Cright%5C%7D%0A)
+
+with the penalty function represented by the piecewise function: 
+
+![\begin{cases} \lambda & \text{if } |\beta| \leq \lambda \\ \frac{(a\lambda - \beta)}{(a - 1) } & \text{if } \lambda < |\beta| \leq a \lambda \\ 0 & \text{if } |\beta| > a \lambda \\ \end{cases}
+](https://render.githubusercontent.com/render/math?math=%5CLarge+%5Cdisplaystyle+%5Cbegin%7Bcases%7D+%5Clambda+%26+%5Ctext%7Bif+%7D+%7C%5Cbeta%7C+%5Cleq+%5Clambda+%5C%5C+%5Cfrac%7B%28a%5Clambda+-+%5Cbeta%29%7D%7B%28a+-+1%29+%7D+%26+%5Ctext%7Bif+%7D+%5Clambda+%3C+%7C%5Cbeta%7C+%5Cleq+a+%5Clambda+%5C%5C+0+%26+%5Ctext%7Bif+%7D+%7C%5Cbeta%7C+%3E+a+%5Clambda+%5C%5C+%5Cend%7Bcases%7D%0A)
+
+The cost function ultimately looks like: 
+
+![jkiyutyfcgvhbkjnkihyguh](https://user-images.githubusercontent.com/55299814/111017670-d7890380-8382-11eb-84e0-7e6908fb891a.png)
+
+### Implementation
 Setting up code to find k-fold cross validated MAE for SCAD regularized regression as well as initialize SCAD:
 ```python 
 def scad_penalty(beta_hat, lambda_val, a_val):
