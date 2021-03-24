@@ -282,7 +282,7 @@ print("Validated MAE Linear Regression = ${:,.2f}".format(1000*np.mean(mae_lm)))
 ```
 ## Kernel Weighted Regression (Loess)
 Kernels use their respective functions to determine the weights of our data points for our locally weighted regression. Kernel weighted regressions work well for data that does not show linear qualities. 
-### Implementation
+#### Implementation
 Below I show how to implement the gaussian kernel:
 ```python 
 def Gaussian(x):
@@ -300,10 +300,74 @@ for idxtrain, idxtest in kf.split(X):
   model_KernReg = KernelReg(endog=y_train,exog=X_train,var_type='ccccccccccc',ckertype='gaussian')
   yhat_sm_test, y_std = model_KernReg.fit(X_test)
   mae_kern.append(mean_absolute_error(y_test, yhat_sm_test))
-print("Validated MAE XGBoost Regression = ${:,.2f}".format(1000*np.mean(mae_kern)))
+print("Validated MAE Gaussian Kernel Regression = ${:,.2f}".format(1000*np.mean(mae_kern)))
 ```
 ## Neural Networks
-Neural Networks are models that look to recognize underlying relationships in a data set through a process that is similar to the way that the human brain works. Neural networks use activation functions to transform inputs. In a neural network, a neuron is a mathematical function that collects and classifies information according to a specific structure or architecture. The neural network ultimately goes through a learning process in which it fine tunes the connection strengths and relationships between neurons in the network to optimize the neural networks performance in solving a particular problem, which in our case is predicting the price. Below I created a function that uses K-fold validation to find the absolute mean error for the predictions of the neural network model as well as initialized the neural network model:
+Neural Networks are models that look to recognize underlying relationships in a data set through a process that is similar to the way that the human brain works. Neural networks use activation functions to transform inputs. In a neural network, a neuron is a mathematical function that collects and classifies information according to a specific structure or architecture. The neural network ultimately goes through a learning process in which it fine tunes the connection strengths and relationships between neurons in the network to optimize the neural networks performance in solving a particular problem, which in our case is predicting the price. 
+#### Implementation
+Below I created a function that uses K-fold validation to find the absolute mean error for the predictions of the neural network model as well as initialized the neural network model:
 ```python 
+import keras
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Dropout
+from sklearn.metrics import r2_score
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping
+model = Sequential()
+model.add(Dense(128, activation="relu", input_dim=1))
+model.add(Dense(32, activation="relu"))
+model.add(Dense(8, activation="relu"))
+model.add(Dense(1, activation="linear"))
+model.compile(loss='mean_absolute_error', optimizer=Adam(lr=1e-3, decay=1e-3 / 200))
+```
+``` python 
+mae_nn = []
 
+for idxtrain, idxtest in kf.split(dat):
+  X_train = dat[idxtrain,:]
+  y_train = dat[idxtrain,]
+  X_test  = dat[idxtest,:]
+  y_test = dat[idxtest,1]
+  es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=200)
+  model.fit(X_train,y_train,validation_split=0.3, epochs=1000, batch_size=100, verbose=0, callbacks=[es])
+  yhat_nn = model.predict(X_test.reshape(-1,1))
+  mae_nn.append(mean_absolute_error(y_test, yhat_nn))
+print("Validated MAE Neural Network Regression = ${:,.2f}".format(1000*np.mean(mae_nn)))
+```
+## XGBoost 
+Boosting refers to a family of algorithms that look to turn weak learners into strong learners. In boosting, the individual models are built sequentially by putting more weight on instances where there are wrong predictions and high magnitudes of errors. The model will focus during learning on instances which are hard to predict correctly, so that the model in a sense learns from past mistakes. Extreme gradient boost is a decision-tree based algorithm that uses advanced gradient boosting and regularization to prevent overfitting. 
+#### Implementation
+I used K-fold validation to find the mean absolute error for the XGBoost model's predictions by running the below code:
+```python 
+model_xgb = xgb.XGBRegressor(objective ='reg:squarederror',n_estimators=100,reg_lambda=20,alpha=1,gamma=10,max_depth=3)
+mae_xgb = []
+
+for idxtrain, idxtest in kf.split(X):
+  X_train = X[idxtrain,:]
+  y_train = y[idxtrain]
+  X_test  = X[idxtest,:]
+  y_test  = y[idxtest]
+  model_xgb.fit(X_train,y_train)
+  yhat_xgb = model_xgb.predict(X_test)
+  mae_xgb.append(mean_absolute_error(y_test, yhat_xgb))
+print("Validated MAE XGBoost Regression = ${:,.2f}".format(1000*np.mean(mae_xgb)))
+```
+## Random Forest 
+Random Forests is a type of regression algorithm that expanands on the more basic Decision Trees algorithm. Random Forest algorithms create a 'forest' of Decision Trees that will be randomly sampled with replacement. Further, random forests will then give weights to each Decision Tree in order to control for some of the overfitting issues that are prevelant in normal Decision Tree algorithm. 
+#### Implementation 
+I used K-fold validation to find the mean absolute error for the Random Forest model's predictions by running the below code:
+```python 
+rf = RandomForestRegressor(n_estimators=1000,max_depth=3)
+mae_rf = []
+
+for idxtrain, idxtest in kf.split(X):
+  X_train = X[idxtrain,:]
+  y_train = y[idxtrain]
+  X_test  = X[idxtest,:]
+  y_test  = y[idxtest]
+  rf.fit(X_train,y_train.ravel())
+  yhat_rf = rf.predict(X_test)
+  mae_rf.append(mean_absolute_error(y_test, yhat_rf))
+print("Validated MAE Random Forest Regression = ${:,.2f}".format(1000*np.mean(mae_rf)))
 ```
