@@ -393,7 +393,7 @@ Here are optimal parameters found for our models:
 | MAE Ridge Regression Model     | 21        |               |             
 | MAE LASSO Model                | .055      |               |             
 | MAE Elastic Net Model          | .055      | .25           | 
-| MAE SCAD Model                 | .125      | 5            |            
+| MAE SCAD Model                 | .125      | 5             |            
 | MAE Square Root LASSO          | .009      | 1.25          | 
 
 | Model                          | Optimal parameters|
@@ -403,6 +403,7 @@ Here are optimal parameters found for our models:
 | Random Forest Regression       | n_estimators=100, max_depth=3                           |           
          
 # Results 
+
 | Model                          | Validated MAE | 
 |--------------------------------|---------------|                               
 | MAE Linear Regression          | $3,629.76     |                        
