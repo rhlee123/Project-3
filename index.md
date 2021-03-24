@@ -42,7 +42,6 @@ poly = PolynomialFeatures(degree=3)
 To take a look at the boston housing data set, here is a heatmap showing the correlations between features in the dataset in which we will be using to predict housing prices: 
 
 ![project1](https://user-images.githubusercontent.com/55299814/111015985-6133d380-8379-11eb-9c51-925a01550166.png)
-
 ## Linear Regression 
 Linear regressions model the linear relationship between a dependent variable and independent variable(s). This method calculates the best-fitting line for the observed data by minimizing the sum of the squares of the vertical deviations from each data point to the line (also known as the Sum of Squared Residuals or the Sum of Squared Errors). Below I fit the linear regression and found the mean absolute error of the model's predictions using K-fold cross validation.
 ```python 
@@ -58,7 +57,9 @@ for idxtrain, idxtest in kf.split(X):
     yhat_test = lm.predict(X_test)
     mae_lm.append(MAE(y_test,yhat_test))
 print("Validated MAE Linear Regression = ${:,.2f}".format(1000*np.mean(mae_lm)))
-```
+``` 
+## Polynomial Regression 
+  Using polynomial features created from our original dataset help when our features in our data do not fit a linear relationship well and would better fit a polynomial relationship. In this project, I will be using polynomical features with degree 3 for my multivariate regularized regressions and stepwise regression.
 ## Regularization 
   Regularization methods are used to determine the weights for features within a model, and depending on the regularization technique, features can be excluded altogether from the model by having a weight of 0. Further, regularization is the process of of regularizing the parameters that constrains or coefficients estimates towards zeros, in otherwords discouraging learning a too complex or too flexible model, and ultimately helping to reduce the risk of overfitting. Regularization helps to choose the preferred model complexity, so that the model is better at predicting. Regularization is essentially adding a penalty term to the objective function, and controlling the model complexity using that penalty term. Regularization ultmately attempts to reduce the variance of the estimator by simplifying it, something that will increase the bias, in such a way that will decrease the expected error of the model's predictions. Additionally, Regularization is useful in tackling issues of multicolinearity among features becauase it incorporates the need to learn additional information for our model other than the observations in the data set.
   
@@ -371,3 +372,50 @@ for idxtrain, idxtest in kf.split(X):
   mae_rf.append(mean_absolute_error(y_test, yhat_rf))
 print("Validated MAE Random Forest Regression = ${:,.2f}".format(1000*np.mean(mae_rf)))
 ```
+## GridSearchCV 
+The Grid Search algorithm is method that is useful in adjusting the parameters in supervised learning models and aim improve the performance of a model by selecting a competitive hyperparameter value. The Grid Search algorithm works by examining all possible combinations of the parameters of interest and finds the best ones. Although this algorithm aims to find the best hyperparameter that yields the lowest MAE, it does not necessarily always yield better results as some hyperparameters might be skipped over in our situation. I applied gridsearch on my models that have hyperparameters and found that gridsearch yielded hyperparameter values with worse MAE's than other methods of finding optimal alpha. Because gridsearch did not do very well, I ended up using another method of hypertuning my parameter.
+#### Implementation
+Example implementation of gridsearch: 
+```python 
+reg = LASSO()
+params = [{'alpha':np.linspace(0.001,10,num=1000)}]
+gs = GridSearchCV(estimator=reg,cv=10,scoring='neg_mean_absolute_error',param_grid=params)
+gs1 = gs.fit(scale.fit_transform(X_poly),y)
+print(gs1.best_params_)
+print('The mean absolute error: ', np.abs(gs_results.best_score_)*1000)
+```
+## Hypertuning Parameters
+Optimal hyperparameters found by plotting all instances of hyperparameter and respective MAE of predictions, and finding the global minimum. 
+Here are optimal parameters found for our models:
+
+| Model                          | Optimal α | Optimal Lambda|
+|--------------------------------|-----------|---------------|                               
+| MAE Ridge Regression Model     | 21        |               |             
+| MAE LASSO Model                | .055      |               |             
+| MAE Elastic Net Model          | .055      | .25           | 
+| MAE SCAD Model                 | .125      | 5            |            
+| MAE Square Root LASSO          | .009      | 1.25          | 
+
+| Model                          | Optimal parameters|
+|--------------------------------|---------------------------------------------------------|
+| Neural Network Regression      | validation_split=0.3, epochs=1000, batch_size=100       | 
+| XGBoost Regression             | n_estimators=100,lambda=20, alpha=1,gamma=10,max_depth=3|    
+| Random Forest Regression       | n_estimators=100, max_depth=3                           |           
+         
+# Results 
+| Model                          | Validated MAE | 
+|--------------------------------|---------------|                               
+| MAE Linear Regression          | $3,629.76     |                        
+| MAE Ridge Model                | $2,187.97     | 
+| MAE LASSO Model                | $2,211.85     |   
+| MAE Elastic Net Model          | $2,169.88     | 
+| MAE SCAD Model                 | $2,605.94     |            
+| MAE Square Root LASSO          | $2,138.52     |
+| MAE Stepwise Regression        | $3,512.45     | 
+| MAE Gaussian Kernel Regression | $2,873.19     | 
+| MAE Neural Network             | $2,475.77     | 
+| MAE XGBoost                    | $2,313.58     | 
+| MAE Random Forest              | $2,855.43     | 
+
+# Conclusion 
+From the results above, it can clearly be seen that all models used in the scenario produced better results (lower k-fold cross validated mean absolute errors) than just the baseline linear model. Further, in particular, it appears that our regularized models performed the best in this instance, and resulted in the lowest cross validated mean absolute errors as regularization helps in situations where there might be multicolinearity such as the boston housing data set used. In particular the square root LASSO regularized regression performed the best with the lowest cross validated mean absolute error of $2,138.52. Square root Lasso especially performed well in this situation because Square Root LASSO accounts for multicolinearity and penalizes in a way that produces sparse solutions. Further, Elastic net regularized regression also performed well with the second lowest validated MAE of $2,169.88
