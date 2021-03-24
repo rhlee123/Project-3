@@ -29,12 +29,14 @@ from statsmodels.nonparametric.kernel_regression import KernelReg
 kf = KFold(n_splits=k,shuffle=True,random_state=1234)
 df_boston = pd.read_csv('/content/gdrive/MyDrive/Colab Notebooks/Boston Housing Prices(1) (1).csv')
 ```
-Preprocessing: 
+Preprocessing as well as setting a standard scaler and the degree at which polynomial features will be created from using the original data (we will be using a degree of 3 for all models that will use polynomial features): 
 ```python 
 df_boston
 features = ['crime','rooms','residential','industrial','nox','older','distance','highway','tax','ptratio','lstat']
 X = np.array(df_boston[features])
 y = np.array(df_boston['cmedv']).reshape(-1,1)
+scale = StandardScaler()
+poly = PolynomialFeatures(degree=3)
 ```
 
 To take a look at the boston housing data set, here is a heatmap showing the correlations between features in the dataset in which we will be using to predict housing prices: 
@@ -102,6 +104,12 @@ def DoKFold_SK(X,y,model,k):
     PE.append(MAE(y_test,yhat_test))
   return 1000*np.mean(PE)
 ```
+### Square Root LASSO 
+Square Root LASSO slightly adjusts the LASSO method, in which it takes the square root of the LASSO cost function. It is important to note that L1 norm is still used for its penalty. Ultimately, lasso weights features by minimizing the cost function: 
+
+![\sqrt{\frac{1}{n}\sum\lim_{i=1}^{n}(y_i-\hat{y}_i)^2} +\alpha\sum\lim_{i=1}^{p}|\beta_i|
+](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+%5Csqrt%7B%5Cfrac%7B1%7D%7Bn%7D%5Csum%5Clim_%7Bi%3D1%7D%5E%7Bn%7D%28y_i-%5Chat%7By%7D_i%29%5E2%7D+%2B%5Calpha%5Csum%5Clim_%7Bi%3D1%7D%5E%7Bp%7D%7C%5Cbeta_i%7C%0A)
+#### Implementation 
 Setting up code to find K-fold cross validated MAE for Square Root LASSO regularized regression as well as initialize square root LASSO:
 ```python
 def sqrtlasso_model(X,y,alpha):
@@ -123,7 +131,6 @@ def sqrtlasso_model(X,y,alpha):
   output = minimize(sqrtlasso, b0, method='L-BFGS-B', jac=dsqrtlasso,options={'gtol': 1e-8, 'maxiter': 1e8,'maxls': 25,'disp': True})
   return output.x
 ```
-#### Implementation 
 ```python 
 def DoKFoldSqrt(X,y,a,k,d):
   PE = []
@@ -162,7 +169,7 @@ The cost function ultimately looks like:
 
 ![jkiyutyfcgvhbkjnkihyguh](https://user-images.githubusercontent.com/55299814/111017670-d7890380-8382-11eb-84e0-7e6908fb891a.png)
 
-### Implementation
+#### Implementation
 Setting up code to find k-fold cross validated MAE for SCAD regularized regression as well as initialize SCAD:
 ```python 
 def scad_penalty(beta_hat, lambda_val, a_val):
@@ -217,6 +224,86 @@ def DoKFoldScad(X,y,lam,a,k):
     PE.append(MAE(y_test,yhat_scad))
   return 1000*np.mean(PE)
 ```
-Code for 
-## 
+### Stepwise Regression 
+In the Stepwise regression, we focus on the the significance and influence of independent variable(features) on the dependent variable by using an approach that encorporates a combination of forward and backward variable selection techniques. Stepwise uses a threshold for the significance of a feature to determine whether or not that feature will be used as a variable. In practice, a threshold value for a p-value is incorporated such that features with p-values lower than the threshold will be encorporated into the model, while p-values higher than the threshold will be kicked out of the model. 
+Code for intializing stepwise feature selection in which the output will be the indices of the columns for the variable that were 'selected' by the stepwise function (meet the p-value threshold) and ultimately incorporated into our linear model. After the outputs are found by inputing the polynomical features from the original data into the below function, we fit a multivariate linear model and perform k-fold cross validation using the features that were kept from our original polynomial features determined by the stepwise function.
+#### Implementation
+Code for implementing stepwise
+```python 
+def stepwise_selection(X, y, 
+                       initial_list=[], 
+                       threshold_in=0.15, 
+                       threshold_out = 0.05, 
+                       verbose=True):    
+    included = list(initial_list)
+    while True:
+        changed=False
+        # forward step
+        excluded = list(set(X.columns)-set(included))
+        new_pval = pd.Series(index=excluded)
+        for new_column in excluded:
+            model = sm.OLS(y, sm.add_constant(pd.DataFrame(X[included+[new_column]]))).fit()
+            new_pval[new_column] = model.pvalues[new_column]
+        best_pval = new_pval.min()
+        if best_pval < threshold_in:
+            best_feature = new_pval.idxmin()
+            included.append(best_feature)
+            changed=True
+            if verbose:
+                print('Add  {:30} with p-value {:.6}'.format(best_feature, best_pval))
 
+        
+        model = sm.OLS(y, sm.add_constant(pd.DataFrame(X[included]))).fit()
+        pvalues = model.pvalues.iloc[1:]
+        worst_pval = pvalues.max() # null if pvalues is empty
+        if worst_pval > threshold_out:
+            changed=True
+            worst_feature = pvalues.idxmax()
+            included.remove(worst_feature)
+            if verbose:
+                print('Drop {:30} with p-value {:.6}'.format(worst_feature, worst_pval))
+        if not changed:
+            break
+    return included
+```
+Using same process as cross-validating our baseline linear model, we can find the k-fold cross validated MAE for our stepwise regression:
+```python 
+lm = LinearRegression()
+mae_lm = []
+for idxtrain, idxtest in kf.split(X):
+    X_train = X[idxtrain,:]
+    y_train = y[idxtrain]
+    X_test  = X[idxtest,:]
+    y_test  = y[idxtest]
+    lm.fit(X_train,y_train)
+    yhat_test = lm.predict(X_test)
+    mae_lm.append(MAE(y_test,yhat_test))
+print("Validated MAE Linear Regression = ${:,.2f}".format(1000*np.mean(mae_lm)))
+```
+## Kernel Weighted Regression (Loess)
+Kernels use their respective functions to determine the weights of our data points for our locally weighted regression. Kernel weighted regressions work well for data that does not show linear qualities. 
+### Implementation
+Below I show how to implement the gaussian kernel:
+```python 
+def Gaussian(x):
+  return np.where(np.abs(x)>1,0,np.exp(-1/2*x**2))
+```
+We will be using statsmodels kernelreg function for the gaussian kernel on our original dataset. Here is the code for finding k-fold cross validated MAE for guasian kernel regression on the original features:
+```python 
+mae_kern = []
+
+for idxtrain, idxtest in kf.split(X):
+  X_train = X[idxtrain,:]
+  y_train = y[idxtrain]
+  X_test  = X[idxtest,:]
+  y_test  = y[idxtest]
+  model_KernReg = KernelReg(endog=y_train,exog=X_train,var_type='ccccccccccc',ckertype='gaussian')
+  yhat_sm_test, y_std = model_KernReg.fit(X_test)
+  mae_kern.append(mean_absolute_error(y_test, yhat_sm_test))
+print("Validated MAE XGBoost Regression = ${:,.2f}".format(1000*np.mean(mae_kern)))
+```
+## Neural Networks
+Neural Networks are models that look to recognize underlying relationships in a data set through a process that is similar to the way that the human brain works. Neural networks use activation functions to transform inputs. In a neural network, a neuron is a mathematical function that collects and classifies information according to a specific structure or architecture. The neural network ultimately goes through a learning process in which it fine tunes the connection strengths and relationships between neurons in the network to optimize the neural networks performance in solving a particular problem, which in our case is predicting the price. Below I created a function that uses K-fold validation to find the absolute mean error for the predictions of the neural network model as well as initialized the neural network model:
+```python 
+
+```
